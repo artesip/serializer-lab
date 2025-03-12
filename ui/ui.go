@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"serializer/point"
 	"serializer/serializer"
 	"sort"
@@ -10,7 +11,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -22,119 +22,129 @@ func createPoints(len int) []point.PointInt {
 	points := []point.PointInt{}
 	for i := 1; i <= len; i++ {
 		randNum := rand.Intn(2)
-
 		if randNum%2 == 0 {
 			points = append(points, point.RandPoint2DConstructor())
 		} else {
 			points = append(points, point.RandPoint3DConstructor())
 		}
 	}
-
 	return points
 }
 
-func createDialog(myWindow fyne.Window, points []point.PointInt, textOutput *widget.Entry) *dialog.CustomDialog {
-	buttonsContainer := container.NewVBox()
-	myDialog := dialog.NewCustom("Диалог с 4 кнопками", "Закрыть", buttonsContainer, myWindow)
+func serializePoints(format string, points []point.PointInt, textSerialized *widget.Entry) {
+	switch format {
+	case "JSON":
+		serializer.JsonSerialize(points, textSerialized)
+	case "XML":
+		serializer.XmlSerialize(points, textSerialized)
+	case "BIN":
+		serializer.BinarySerialize(points, textSerialized)
+	case "SOAP":
+		serializer.SoapSerialize(points, textSerialized)
+	case "YAML":
+		serializer.YamlSerialize(points, textSerialized)
+	}
+}
 
-	button1 := widget.NewButton("JSON", func() {
-		serializer.JsonSerialize(myDialog, points, textOutput)
-	})
-
-	button2 := widget.NewButton("XML", func() {
-		serializer.XmlSerialize(myDialog, points, textOutput)
-	})
-
-	button3 := widget.NewButton("BIN", func() {
-		serializer.BinarySerialize(myDialog, points, textOutput)
-	})
-
-	button4 := widget.NewButton("SOAP", func() {
-		serializer.SoapSerialize(myDialog, points, textOutput)
-	})
-
-	button5 := widget.NewButton("YAML", func() {
-		serializer.YamlSerialize(myDialog, points, textOutput)
-	})
-
-	button6 := widget.NewButton("CUSTOM", func() {})
-
-	buttonsContainer.Add(button1)
-	buttonsContainer.Add(button2)
-	buttonsContainer.Add(button3)
-	buttonsContainer.Add(button4)
-	buttonsContainer.Add(button5)
-	buttonsContainer.Add(button6)
-
-	return myDialog
+func saveToFile(content string, format string) {
+	filename := "output." + format
+	file, err := os.Create(filename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	file.WriteString(content)
 }
 
 func CreateUI() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("MySerializer")
+	myWindow.Resize(fyne.NewSize(600, 500))
 
-	myWindow.Resize(fyne.NewSize(400, 500))
+	textResult := widget.NewMultiLineEntry()
+	textResult.SetMinRowsVisible(12)
+	textResult.Wrapping = fyne.TextWrapWord
 
-	textOutput := widget.NewMultiLineEntry()
-	textOutput.Wrapping = fyne.TextWrapWord
-	textOutput.SetMinRowsVisible(10)
-
-	scrollContainer := container.NewVScroll(textOutput)
-	scrollContainer.SetMinSize(fyne.NewSize(400, 200))
-	textOutput.Wrapping = fyne.TextWrapWord
+	textSerialized := widget.NewMultiLineEntry()
+	textSerialized.SetMinRowsVisible(6)
+	textSerialized.Wrapping = fyne.TextWrapWord
 
 	var points []point.PointInt
+	selectedFormat := "JSON"
 
-	button1 := widget.NewButton("Create", func() {
+	formats := []string{"JSON", "XML", "BIN", "SOAP", "YAML", "CUSTOM"}
+	formatButtons := container.NewVBox()
+	var buttons []*widget.Button
+
+	for _, format := range formats {
+		format := format
+		var btn *widget.Button
+		btn = widget.NewButton(format, func() {
+			selectedFormat = format
+			for _, b := range buttons {
+				b.Importance = widget.MediumImportance
+				b.Refresh()
+			}
+			btn.Importance = widget.HighImportance
+			if len(points) != 0 {
+				serializePoints(selectedFormat, points, textResult)
+			}
+		})
+		if selectedFormat == format {
+			btn.Importance = widget.HighImportance
+		}
+		buttons = append(buttons, btn)
+		formatButtons.Add(btn)
+	}
+
+	btnCreate := widget.NewButton("Создать точки", func() {
 		points = createPoints(5)
-
 		var pointStr string
 		for _, p := range points {
 			pointStr += fmt.Sprintln(p.ToString())
 		}
-
-		textOutput.SetText("Созданы точки\n" + pointStr)
+		textSerialized.SetText("Созданы точки:\n" + pointStr)
+		serializePoints(selectedFormat, points, textResult)
 	})
 
-	button2 := widget.NewButton("Sort", func() {
-
+	btnSort := widget.NewButton("Сортировать", func() {
 		if len(points) == 0 {
-			textOutput.SetText("Сначала создайте точки для сортировки!\n")
+			textSerialized.SetText("Сначала создайте точки!")
 			return
 		}
-
 		sort.Sort(point.ByMetric(points))
-
 		var pointStr string
 		for _, p := range points {
 			pointStr += fmt.Sprintln(p.ToString())
 		}
-
-		textOutput.SetText("Отсортированные точки\n" + pointStr)
+		textSerialized.SetText("Отсортированные точки:\n" + pointStr)
+		serializePoints(selectedFormat, points, textResult)
 	})
 
-	button3 := widget.NewButton("Serialize", func() {
-		dialog := createDialog(myWindow, points, textOutput)
-		dialog.Show()
+	btnSave := widget.NewButton("Сохранить в файл", func() {
+		saveToFile(textResult.Text, selectedFormat)
 	})
 
-	button4 := widget.NewButton("Deserialize", func() {
-		textOutput.SetText("Нажата Кнопка 4\nСтрока 2\nСтрока 3\nСтрока 4\nСтрока 5\nСтрока 6")
+	btnSwitch := widget.NewButton("Перевернуть", func() {
+		textSerialized.SetText("Десериализация в формате: " + selectedFormat)
 	})
 
-	buttons := container.NewHBox(
-		button1,
-		button2,
-		button3,
-		button4,
+	mainButtons := container.NewHBox(btnCreate, btnSort, btnSave, btnSwitch)
+
+	mainContent := container.NewVBox(
+		widget.NewLabel("Сериализация:"),
+		textSerialized,
+		widget.NewLabel("Результат:"),
+		textResult,
+		mainButtons,
 	)
 
-	content := container.NewVBox(
-		textOutput,
-		buttons,
+	content := container.NewHSplit(
+		container.NewVBox(widget.NewLabel("Выберите формат:"), formatButtons),
+		mainContent,
 	)
+	content.SetOffset(0.2)
 
 	myWindow.SetContent(content)
-
 	myWindow.ShowAndRun()
 }

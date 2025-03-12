@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"serializer/point"
 
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"gopkg.in/yaml.v2"
 )
 
-func JsonSerialize(dialog *dialog.CustomDialog, points []point.PointInt, textOutput *widget.Entry) {
+func JsonSerialize(points []point.PointInt, textOutput *widget.Entry) {
 	jsonData, err := json.MarshalIndent(points, "", "  ")
 
 	if err != nil {
@@ -22,10 +21,9 @@ func JsonSerialize(dialog *dialog.CustomDialog, points []point.PointInt, textOut
 	}
 
 	textOutput.SetText(string(jsonData))
-	dialog.Hide()
 }
 
-func XmlSerialize(dialog *dialog.CustomDialog, points []point.PointInt, textOutput *widget.Entry) {
+func XmlSerialize(points []point.PointInt, textOutput *widget.Entry) {
 	xmlData, err := xml.MarshalIndent(points, "", "  ")
 
 	if err != nil {
@@ -34,10 +32,9 @@ func XmlSerialize(dialog *dialog.CustomDialog, points []point.PointInt, textOutp
 	}
 
 	textOutput.SetText(string(xmlData))
-	dialog.Hide()
 }
 
-func BinarySerialize(dialog *dialog.CustomDialog, points []point.PointInt, textOutput *widget.Entry) {
+func BinarySerialize(points []point.PointInt, textOutput *widget.Entry) {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
 
@@ -52,10 +49,9 @@ func BinarySerialize(dialog *dialog.CustomDialog, points []point.PointInt, textO
 	}
 
 	textOutput.SetText(fmt.Sprintf("%x", buffer.Bytes()))
-	dialog.Hide()
 }
 
-func YamlSerialize(dialog *dialog.CustomDialog, points []point.PointInt, textOutput *widget.Entry) {
+func YamlSerialize(points []point.PointInt, textOutput *widget.Entry) {
 	yamlData, err := yaml.Marshal(points)
 	if err != nil {
 		textOutput.SetText("Ошибка сериализации YAML: " + err.Error())
@@ -63,7 +59,6 @@ func YamlSerialize(dialog *dialog.CustomDialog, points []point.PointInt, textOut
 	}
 
 	textOutput.SetText(string(yamlData))
-	dialog.Hide()
 }
 
 type Envelope struct {
@@ -83,7 +78,7 @@ type GetPoints struct {
 	Points  []point.PointInt `xml:"point:Point"`
 }
 
-func SoapSerialize(dialog *dialog.CustomDialog, points []point.PointInt, textOutput *widget.Entry) {
+func SoapSerialize(points []point.PointInt, textOutput *widget.Entry) {
 	envelope := Envelope{
 		XMLNS:      "http://schemas.xmlsoap.org/soap/envelope/",
 		XMLNSPoint: "http://example.com/point",
@@ -101,5 +96,4 @@ func SoapSerialize(dialog *dialog.CustomDialog, points []point.PointInt, textOut
 	}
 
 	textOutput.SetText(string(xmlData))
-	dialog.Hide()
 }
