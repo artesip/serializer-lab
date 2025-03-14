@@ -1,6 +1,7 @@
 package point
 
 import (
+	"encoding/xml"
 	"fmt"
 	"math"
 	"math/rand"
@@ -14,9 +15,14 @@ type ToString interface {
 	ToString() string
 }
 
+type GetType interface {
+	GetType() string
+}
+
 type PointInt interface {
 	Metric
 	ToString
+	GetType
 }
 
 type Point2D struct {
@@ -62,6 +68,14 @@ func (p Point3D) Metric() float64 {
 	return math.Sqrt(math.Pow(p.X, 2) + math.Pow(p.Y, 2) + math.Pow(p.Z, 2))
 }
 
+func (p Point2D) GetType() string {
+	return "2D"
+}
+
+func (p Point3D) GetType() string {
+	return "3D"
+}
+
 type ByMetric []PointInt
 
 func (e ByMetric) Len() int {
@@ -73,4 +87,30 @@ func (a ByMetric) Less(i, j int) bool {
 }
 func (a ByMetric) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
+}
+
+type SOAPEnvelope struct {
+	XMLName xml.Name `xml:"Envelope"`
+	XMLNS   string   `xml:"xmlns:soap,attr"`
+	Body    SOAPBody `xml:"Body"`
+}
+
+type SOAPBody struct {
+	XMLName xml.Name  `xml:"Body"`
+	Points  XMLPoints `xml:"Points"`
+}
+
+type XMLPoints struct {
+	XMLName xml.Name       `xml:"Points"`
+	Points  []WrappedPoint `xml:"Point"`
+}
+
+type WrappedPoint struct {
+	Type string    `json:"type" xml:"type" yaml:"type"`
+	Data PointData `json:"data" xml:"data" yaml:"data"`
+}
+
+type PointData struct {
+	Point2D *Point2D `json:"Point2D,omitempty" xml:"Point2D,omitempty" yaml:"Point2D,omitempty" `
+	Point3D *Point3D `json:"Point3D,omitempty" xml:"Point3D,omitempty" yaml:"Point3D,omitempty" `
 }
